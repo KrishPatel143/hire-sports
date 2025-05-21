@@ -305,7 +305,7 @@ function Header() {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-6 md:gap-10">
           <Link href="/" className="flex items-center space-x-2">
-            <span className="text-xl font-bold">SportsGear</span>
+            <span className="text-xl font-bold">HireSports</span>
           </Link>
           
           <nav className="hidden md:flex gap-6">
@@ -450,7 +450,7 @@ function Header() {
                   <div className="p-6 h-full flex flex-col">
                     <div className="flex items-center justify-between mb-8">
                       <Link href="/" className="flex items-center space-x-2">
-                        <span className="text-xl font-bold">SportsGear</span>
+                        <span className="text-xl font-bold">HireSports</span>
                       </Link>
                       <button
                         className="rounded-md p-1 hover:bg-accent"
@@ -540,7 +540,7 @@ function Header() {
                     <div className="mt-auto">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">
-                          © 2025 SportsGear
+                          © 2025 HireSports
                         </span>
                         <button
                           className="rounded-md p-2 border border-input hover:bg-accent"

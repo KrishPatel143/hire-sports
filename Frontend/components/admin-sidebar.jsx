@@ -52,7 +52,7 @@ export function AdminSidebar() {
       <SidebarHeader className="border-b">
         <div className="flex items-center gap-2 px-2 py-3">
           <SidebarTrigger />
-          <span className="font-semibold text-lg">SportsGear Admin</span>
+          <span className="font-semibold text-lg">HireSports Admin</span>
         </div>
       </SidebarHeader>
       <SidebarContent>

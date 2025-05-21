@@ -7,9 +7,9 @@ export default function AboutPage() {
       <section className="py-12 md:py-24">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <div>
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">About SportsGear</h1>
+            <h1 className="text-4xl md:text-5xl font-bold mb-6">About HireSports</h1>
             <p className="text-lg text-gray-700 dark:text-gray-300 mb-6">
-              Founded in 2018, SportsGear has been at the forefront of providing high-quality sportswear that combines
+              Founded in 2018, HireSports has been at the forefront of providing high-quality sportswear that combines
               performance, comfort, and style. Our journey began with a simple mission: to create sportswear that
               empowers athletes of all levels to perform at their best.
             </p>
@@ -22,7 +22,7 @@ export default function AboutPage() {
           <div className="relative">
             <img
               src="https://media.istockphoto.com/id/1136317339/photo/sports-equipment-on-floor.jpg?s=612x612&w=0&k=20&c=-aI8u_Se89IC-HJZYH724ei5z-bIcSvRW6qUwyMtRyE="
-              alt="SportsGear Team"
+              alt="HireSports Team"
               className="rounded-lg shadow-lg"
             />
           </div>
@@ -34,7 +34,7 @@ export default function AboutPage() {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4">Our Mission & Values</h2>
           <p className="text-lg text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
-            At SportsGear, we're guided by a set of core values that define who we are and how we operate.
+            At HireSports, we're guided by a set of core values that define who we are and how we operate.
           </p>
         </div>
 
@@ -90,7 +90,7 @@ export default function AboutPage() {
           <div className="order-2 md:order-1">
             <h2 className="text-3xl font-bold mb-6">Our Story</h2>
             <p className="text-gray-700 dark:text-gray-300 mb-4">
-              SportsGear began with a group of athletes who were frustrated with the sportswear options available in the
+              HireSports began with a group of athletes who were frustrated with the sportswear options available in the
               market. We wanted gear that wasn't just functional, but also stylish and built to last.
             </p>
             <p className="text-gray-700 dark:text-gray-300 mb-4">
@@ -105,7 +105,7 @@ export default function AboutPage() {
           <div className="order-1 md:order-2">
             <img
               src="https://media.istockphoto.com/id/1321017606/photo/multicolored-sport-sleeveless-t-shirts-and-shirts.jpg?s=612x612&w=0&k=20&c=NddwChiHYyB2Swr3emp94PiSGHV2RQXzghkmmj3KkWo="
-              alt="SportsGear Journey"
+              alt="HireSports Journey"
               className="rounded-lg shadow-lg"
             />
           </div>
@@ -117,7 +117,7 @@ export default function AboutPage() {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4">Meet Our Team</h2>
           <p className="text-lg text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
-            The passionate individuals behind SportsGear who work tirelessly to bring you the best products.
+            The passionate individuals behind HireSports who work tirelessly to bring you the best products.
           </p>
         </div>
 
@@ -160,17 +160,17 @@ export default function AboutPage() {
           {[
             {
               quote:
-                "SportsGear products have significantly improved my performance. The quality and comfort are unmatched!",
+                "HireSports products have significantly improved my performance. The quality and comfort are unmatched!",
               author: "Alex T., Marathon Runner",
             },
             {
               quote:
-                "I've tried many sportswear brands, but SportsGear stands out for its durability and style. Highly recommend!",
+                "I've tried many sportswear brands, but HireSports stands out for its durability and style. Highly recommend!",
               author: "Samantha K., Yoga Instructor",
             },
             {
               quote:
-                "The customer service at SportsGear is exceptional. They went above and beyond to help me find the perfect gear.",
+                "The customer service at HireSports is exceptional. They went above and beyond to help me find the perfect gear.",
               author: "Marcus L., Basketball Coach",
             },
           ].map((testimonial, index) => (
