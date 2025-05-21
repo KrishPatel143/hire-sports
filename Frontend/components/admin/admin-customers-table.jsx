@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowUpDown, Eye, MoreHorizontal, UserCog, Mail } from "lucide-react"
+import { ArrowUpDown, Eye, MoreHorizontal, UserCog, Mail, Ban, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -24,39 +24,79 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { UserAPI } from "@/lib/api/admin"
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
-// Define the type for the customer profile
-
-export default function AdminCustomersTable() {
+export default function AdminCustomersTable({ filterParams = {}, onPageChange }) {
   const [customers, setCustomers] = useState([])
-  const [sortColumn, setSortColumn] = useState('')
+  const [sortColumn, setSortColumn] = useState('name')
   const [sortDirection, setSortDirection] = useState('asc')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [pagination, setPagination] = useState({
+    page: filterParams.page || 1,
+    totalPages: 1,
+    totalItems: 0
+  })
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [showStatusDialog, setShowStatusDialog] = useState(false)
 
   // Fetch customers from the API
   useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        setIsLoading(true)
-        const response = await fetch('http://localhost:8000/auth/profiles')
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch customers')
-        }
-        
-        const data = await response.json()
-        setCustomers(data)
-        setIsLoading(false)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An unknown error occurred')
-        setIsLoading(false)
-        toast.error('Failed to load customers')
-      }
-    }
-
     fetchCustomers()
-  }, [])
+  }, [
+    filterParams.page,
+    filterParams.status,
+    filterParams.searchTerm,
+    filterParams.startDate,
+    filterParams.endDate,
+    sortColumn, 
+    sortDirection
+  ])
+
+  const fetchCustomers = async () => {
+    try {
+      setIsLoading(true)
+      
+      const params = {
+        page: filterParams.page || pagination.page,
+        limit: filterParams.limit || 10,
+        sortBy: `${sortColumn}:${sortDirection}`,
+        status: filterParams.status || '',
+        search: filterParams.searchTerm || '',
+        startDate: filterParams.startDate || '',
+        endDate: filterParams.endDate || ''
+      }
+      
+      const response = await UserAPI.getAllUsers(params)
+      
+      if (response.success) {
+        setCustomers(response.users || [])
+        setPagination({
+          page: response.currentPage || 1,
+          totalPages: response.totalPages || 1,
+          totalItems: response.totalUsers || 0
+        })
+      } else {
+        setError(response.error || 'Failed to fetch customers')
+        toast.error('Error', { description: 'Failed to load customers' })
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred')
+      toast.error('Error', { description: 'Failed to load customers' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleSort = (column) => {
     if (sortColumn === column) {
@@ -67,22 +107,34 @@ export default function AdminCustomersTable() {
     }
   }
 
-  const sortedCustomers = [...customers].sort((a, b) => {
-    if (!sortColumn) return 0
-
-    const aValue = a[sortColumn]
-    const bValue = b[sortColumn]
-
-    if (typeof aValue === "string" && typeof bValue === "string") {
-      return sortDirection === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue)
+  const handleToggleStatus = async () => {
+    if (!selectedUser) return
+    
+    try {
+      const response = await UserAPI.toggleUserStatus(selectedUser._id)
+      
+      if (response.success) {
+        // Update the user in the local state
+        setCustomers(customers.map(user =>
+          user._id === selectedUser._id
+            ? { ...user, isActive: !user.isActive }
+            : user
+        ))
+        
+        toast.success('Success', { 
+          description: `User status has been ${selectedUser.isActive ? 'deactivated' : 'activated'}`
+        })
+      } else {
+        toast.error('Error', { description: response.error || 'Failed to update user status' })
+      }
+    } catch (error) {
+      console.error('Error toggling user status:', error)
+      toast.error('Error', { description: 'An unexpected error occurred' })
+    } finally {
+      setSelectedUser(null)
+      setShowStatusDialog(false)
     }
-
-    if (typeof aValue === "number" && typeof bValue === "number") {
-      return sortDirection === "asc" ? aValue - bValue : bValue - aValue
-    }
-
-    return 0
-  })
+  }
 
   const getStatusBadge = (isActive) => {
     return isActive ? (
@@ -98,6 +150,7 @@ export default function AdminCustomersTable() {
 
   // Generate avatar fallback
   const getAvatarFallback = (name) => {
+    if (!name) return "??"
     return name
       .split(" ")
       .map((n) => n[0])
@@ -105,12 +158,63 @@ export default function AdminCustomersTable() {
       .toUpperCase()
   }
 
-  if (isLoading) {
-    return <div className="text-center py-4">Loading customers...</div>
+  // Generate pagination items
+  const renderPaginationItems = () => {
+    const items = []
+    const maxPages = Math.min(5, pagination.totalPages)
+    
+    let startPage = Math.max(1, pagination.page - 2)
+    let endPage = Math.min(pagination.totalPages, startPage + maxPages - 1)
+    
+    // Adjust start page if we're near the end
+    if (endPage - startPage + 1 < maxPages) {
+      startPage = Math.max(1, endPage - maxPages + 1)
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      items.push(
+        <PaginationItem key={i}>
+          <PaginationLink 
+            onClick={(e) => {
+              e.preventDefault()
+              if (onPageChange) {
+                onPageChange(i)
+              } else {
+                setPagination(prev => ({ ...prev, page: i }))
+              }
+            }}
+            href="#" 
+            isActive={i === pagination.page}
+          >
+            {i}
+          </PaginationLink>
+        </PaginationItem>
+      )
+    }
+    
+    return items
   }
 
-  if (error) {
-    return <div className="text-center text-red-500 py-4">{error}</div>
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A"
+    return new Date(dateString).toLocaleDateString()
+  }
+
+  if (isLoading && customers.length === 0) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    )
+  }
+
+  if (error && customers.length === 0) {
+    return (
+      <div className="rounded-md border p-8 text-center">
+        <div className="text-center text-red-500 mb-4">{error}</div>
+        <Button onClick={fetchCustomers}>Try Again</Button>
+      </div>
+    )
   }
 
   return (
@@ -119,11 +223,20 @@ export default function AdminCustomersTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Customer</TableHead>
               <TableHead>
                 <Button
                   variant="ghost"
-                  onClick={() => handleSort("Orders")}
+                  onClick={() => handleSort("name")}
+                  className="flex items-center p-0 h-auto font-medium"
+                >
+                  Customer
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("orderCount")}
                   className="flex items-center p-0 h-auto font-medium"
                 >
                   Orders
@@ -133,7 +246,7 @@ export default function AdminCustomersTable() {
               <TableHead>
                 <Button
                   variant="ghost"
-                  onClick={() => handleSort("TotalSpent")}
+                  onClick={() => handleSort("totalSpent")}
                   className="flex items-center p-0 h-auto font-medium"
                 >
                   Total Spent
@@ -154,83 +267,154 @@ export default function AdminCustomersTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedCustomers.map((customer) => (
-              <TableRow key={customer._id}>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarImage 
-                        src={`/api/placeholder/40/40?text=${getAvatarFallback(customer.name)}`} 
-                        alt={customer.name} 
-                      />
-                      <AvatarFallback>
-                        {getAvatarFallback(customer.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">{customer.name}</div>
-                      <div className="text-xs text-muted-foreground">{customer.email}</div>
-                      {getStatusBadge(customer.isActive)}
+            {customers.length > 0 ? (
+              customers.map((customer) => (
+                <TableRow key={customer._id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarImage 
+                          src={customer.avatar || `/api/placeholder/40/40?text=${getAvatarFallback(customer.name)}`} 
+                          alt={customer.name} 
+                        />
+                        <AvatarFallback>
+                          {getAvatarFallback(customer.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium">{customer.name}</div>
+                        <div className="text-xs text-muted-foreground">{customer.email}</div>
+                        {getStatusBadge(customer.isActive)}
+                      </div>
                     </div>
-                  </div>
-                </TableCell>
-                <TableCell>{customer.Orders}</TableCell>
-                <TableCell>${customer.TotalSpent.toFixed(2)}</TableCell>
-                <TableCell>{new Date(customer.createdAt).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Actions</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/customers/${customer._id}`}>
-                          <Eye className="mr-2 h-4 w-4" /> View Profile
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Mail className="mr-2 h-4 w-4" /> Send Email
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/customers/${customer._id}/edit`}>
-                          <UserCog className="mr-2 h-4 w-4" /> Edit Customer
-                        </Link>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  </TableCell>
+                  <TableCell>{customer.orderCount || 0}</TableCell>
+                  <TableCell>${customer.totalSpent?.toFixed(2) || "0.00"}</TableCell>
+                  <TableCell>{formatDate(customer.createdAt)}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Actions</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/customers/${customer._id}`}>
+                            <Eye className="mr-2 h-4 w-4" /> View Profile
+                          </Link>
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/customers/${customer._id}/edit`}>
+                            <UserCog className="mr-2 h-4 w-4" /> Edit Customer
+                          </Link>
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedUser(customer)
+                            setShowStatusDialog(true)
+                          }}
+                        >
+                          {customer.isActive ? (
+                            <>
+                              <Ban className="mr-2 h-4 w-4 text-red-500" /> Deactivate
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="mr-2 h-4 w-4 text-green-500" /> Activate
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={5} className="h-24 text-center">
+                  No customers found
                 </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </div>
 
-      <Pagination>
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious href="#" />
-          </PaginationItem>
-          <PaginationItem>
-            <PaginationLink href="#" isActive>
-              1
-            </PaginationLink>
-          </PaginationItem>
-          <PaginationItem>
-            <PaginationLink href="#">2</PaginationLink>
-          </PaginationItem>
-          <PaginationItem>
-            <PaginationLink href="#">3</PaginationLink>
-          </PaginationItem>
-          <PaginationItem>
-            <PaginationNext href="#" />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+      {pagination.totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious 
+                href="#" 
+                onClick={(e) => {
+                  e.preventDefault()
+                  if (pagination.page > 1) {
+                    if (onPageChange) {
+                      onPageChange(pagination.page - 1)
+                    } else {
+                      setPagination(prev => ({ ...prev, page: prev.page - 1 }))
+                    }
+                  }
+                }}
+                className={pagination.page <= 1 ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+            
+            {renderPaginationItems()}
+            
+            <PaginationItem>
+              <PaginationNext 
+                href="#" 
+                onClick={(e) => {
+                  e.preventDefault()
+                  if (pagination.page < pagination.totalPages) {
+                    if (onPageChange) {
+                      onPageChange(pagination.page + 1)
+                    } else {
+                      setPagination(prev => ({ ...prev, page: prev.page + 1 }))
+                    }
+                  }
+                }}
+                className={pagination.page >= pagination.totalPages ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
+
+      {/* Confirmation Dialog for Status Toggle */}
+      <AlertDialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {selectedUser?.isActive 
+                ? "Deactivate User Account" 
+                : "Activate User Account"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedUser?.isActive 
+                ? "Are you sure you want to deactivate this user account? They will no longer be able to log in or place orders."
+                : "Are you sure you want to activate this user account? They will be able to log in and place orders."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleToggleStatus}
+              className={selectedUser?.isActive ? "bg-red-500 hover:bg-red-600" : ""}
+            >
+              {selectedUser?.isActive ? "Deactivate" : "Activate"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

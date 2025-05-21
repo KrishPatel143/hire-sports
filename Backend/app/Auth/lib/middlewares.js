@@ -5,6 +5,7 @@ const Admin = require('../../../models/User/Admin');
 const authMiddleware = {};
 
 // Middleware to protect routes - verifies JWT token
+// Middleware to protect routes - verifies JWT token
 authMiddleware.protect = async (req, res, next) => {
   try {
     let token;
@@ -56,7 +57,8 @@ authMiddleware.protect = async (req, res, next) => {
 
       // Grant access to protected route
       req.admin = decoded;
-      console.log('Setting req.admin:', req.admin);
+      req.user = decoded; // Add this line to also set req.user with the same data
+      console.log('Setting req.admin and req.user:', req.admin);
       next();
     } catch (error) {
       console.error('JWT verification error:', error.message);

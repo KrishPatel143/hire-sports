@@ -4,7 +4,7 @@ const controllers = require('./lib/controllers');
 const authMiddleware = require('../Auth/lib/middlewares');
 
 // Dashboard statistics
-router.get('/dashboard', authMiddleware.protect, authMiddleware.restrictTo('admin', 'superadmin'), controllers.getDashboardStats);
+router.get('/dashboard', controllers.getDashboardStats);
 
 // Admin management (superadmin only)
 router.get('/admins', authMiddleware.protect, authMiddleware.isSuperAdmin, controllers.getAllAdmins);

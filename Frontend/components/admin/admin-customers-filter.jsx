@@ -1,9 +1,7 @@
 "use client"
 
-import  React from "react"
-
-import { useState } from "react"
-import { Search, Filter, X, Calendar } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Search, Filter, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -19,33 +17,58 @@ import {
 } from "@/components/ui/sheet"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
-import { format } from "date-fns"
+import { DateRangePicker } from "@/components/ui/date-range-picker"
 
-export default function AdminCustomersFilter() {
+export default function AdminCustomersFilter({ onSearch, onFilterChange }) {
   const [searchTerm, setSearchTerm] = useState("")
-  const [activeFilters, setActiveFilters] = useState()
+  const [activeFilters, setActiveFilters] = useState({})
 
   // Filter form state
-  const [status, setStatus] = useState ("")
-  const [orderCount, setOrderCount] = useState ("")
-  const [joinDateFrom, setJoinDateFrom] = useState(undefined)
-  const [joinDateTo, setJoinDateTo] = useState(undefined)
+  const [status, setStatus] = useState("")
+  const [dateRange, setDateRange] = useState({ from: undefined, to: undefined })
+
+  // Pass search term to parent when it changes
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (onSearch && searchTerm !== undefined) {
+        onSearch(searchTerm)
+      }
+    }, 500) // 500ms debounce
+
+    return () => clearTimeout(delayDebounceFn)
+  }, [searchTerm, onSearch])
+
+  // Pass active filters to parent when they change
+  useEffect(() => {
+    if (onFilterChange && Object.keys(activeFilters).length > 0) {
+      const apiFilters = {}
+      
+      if (activeFilters.status && activeFilters.status !== 'all') {
+        apiFilters.status = activeFilters.status
+      }
+      
+      if (activeFilters.dateRange) {
+        apiFilters.startDate = activeFilters.dateRange.from
+        apiFilters.endDate = activeFilters.dateRange.to
+      }
+      
+      onFilterChange(apiFilters)
+    }
+  }, [activeFilters, onFilterChange])
 
   const handleSearch = (e) => {
     e.preventDefault()
-    console.log("Searching for:", searchTerm)
-    // In a real app, this would trigger a search
+    if (onSearch) {
+      onSearch(searchTerm)
+    }
   }
 
   const handleApplyFilters = () => {
     const newFilters = {}
 
     if (status) newFilters.status = status
-    if (orderCount) newFilters.orderCount = orderCount
-    if (joinDateFrom && joinDateTo) {
-      newFilters.joinDate = { from: joinDateFrom, to: joinDateTo }
+    if (dateRange.from && dateRange.to) {
+      newFilters.dateRange = dateRange
     }
 
     setActiveFilters(newFilters)
@@ -53,10 +76,12 @@ export default function AdminCustomersFilter() {
 
   const handleClearFilters = () => {
     setStatus("")
-    setOrderCount("")
-    setJoinDateFrom(undefined)
-    setJoinDateTo(undefined)
+    setDateRange({ from: undefined, to: undefined })
     setActiveFilters({})
+    
+    if (onFilterChange) {
+      onFilterChange({})
+    }
   }
 
   const handleRemoveFilter = (key) => {
@@ -69,12 +94,8 @@ export default function AdminCustomersFilter() {
       case "status":
         setStatus("")
         break
-      case "orderCount":
-        setOrderCount("")
-        break
-      case "joinDate":
-        setJoinDateFrom(undefined)
-        setJoinDateTo(undefined)
+      case "dateRange":
+        setDateRange({ from: undefined, to: undefined })
         break
     }
   }
@@ -82,11 +103,9 @@ export default function AdminCustomersFilter() {
   const getFilterLabel = (key, value) => {
     switch (key) {
       case "status":
-        return `Status: ${value}`
-      case "orderCount":
-        return `Orders: ${value}`
-      case "joinDate":
-        return `Join Date: ${format(value.from, "MMM d, yyyy")} - ${format(value.to, "MMM d, yyyy")}`
+        return `Status: ${value === "true" ? "Active" : "Inactive"}`
+      case "dateRange":
+        return `Joined: ${value.from.toLocaleDateString()} - ${value.to.toLocaleDateString()}`
       default:
         return ""
     }
@@ -100,7 +119,7 @@ export default function AdminCustomersFilter() {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search customers by name or email..."
+              placeholder="Search by name, email, or phone..."
               className="pl-8"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -121,68 +140,27 @@ export default function AdminCustomersFilter() {
             </SheetHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="status">Customer Status</Label>
+                <Label htmlFor="status">Account Status</Label>
                 <Select value={status} onValueChange={setStatus}>
                   <SelectTrigger id="status">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="blocked">Blocked</SelectItem>
+                    <SelectItem value="true">Active</SelectItem>
+                    <SelectItem value="false">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="orderCount">Order Count</Label>
-                <Select value={orderCount} onValueChange={setOrderCount}>
-                  <SelectTrigger id="orderCount">
-                    <SelectValue placeholder="Select order count" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="0">No orders</SelectItem>
-                    <SelectItem value="1-3">1-3 orders</SelectItem>
-                    <SelectItem value="4-10">4-10 orders</SelectItem>
-                    <SelectItem value="10+">10+ orders</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Join Date Range</Label>
-                <div className="flex flex-col gap-2">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal">
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {joinDateFrom ? format(joinDateFrom, "PPP") : "From date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <CalendarComponent
-                        mode="single"
-                        selected={joinDateFrom}
-                        onSelect={setJoinDateFrom}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal">
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {joinDateTo ? format(joinDateTo, "PPP") : "To date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <CalendarComponent mode="single" selected={joinDateTo} onSelect={setJoinDateTo} initialFocus />
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                <Label>Join Date</Label>
+                <DateRangePicker 
+                  from={dateRange.from} 
+                  to={dateRange.to} 
+                  onFromChange={(date) => setDateRange(prev => ({ ...prev, from: date }))}
+                  onToChange={(date) => setDateRange(prev => ({ ...prev, to: date }))}
+                />
               </div>
             </div>
             <SheetFooter>
@@ -199,7 +177,28 @@ export default function AdminCustomersFilter() {
         </Sheet>
       </div>
 
+      {/* Active filters */}
+      {Object.keys(activeFilters).length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(activeFilters).map(([key, value]) => (
+            <Badge key={key} variant="secondary" className="flex items-center gap-1">
+              {getFilterLabel(key, value)}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-4 w-4 p-0 ml-1"
+                onClick={() => handleRemoveFilter(key)}
+              >
+                <X className="h-3 w-3" />
+                <span className="sr-only">Remove filter</span>
+              </Button>
+            </Badge>
+          ))}
+          <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={handleClearFilters}>
+            Clear all
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
-

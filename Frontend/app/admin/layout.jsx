@@ -2,16 +2,39 @@
 
 import React from "react"
 import { redirect } from "next/navigation"
-import { AdminSidebar } from "@/components/admin-sidebar"
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { getCurrentUser } from "@/lib/session"
 import { toast } from "sonner"
+import { 
+  LayoutDashboard, 
+  ShoppingBag, 
+  Users, 
+  BarChart, 
+  Package, 
+  Shield
+} from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+
+// Admin navigation items
+const adminNavItems = [
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/admin/products", label: "Products", icon: Package },
+  { href: "/admin/customers", label: "Customers", icon: Users },
+  { href: "/admin/analytics", label: "Analytics", icon: BarChart },
+];
+
+// Utility function to conditionally join classNames
+const cn = (...classes) => {
+  return classes.filter(Boolean).join(" ");
+};
 
 export default function AdminLayout({
   children,
 }) {
   const [user, setUser] = React.useState(null)
   const [isLoading, setIsLoading] = React.useState(true)
+  const [isOpen, setIsOpen] = React.useState(false) // For mobile menu
+  const pathname = usePathname()
 
   React.useEffect(() => {
     const checkUser = async () => {
@@ -79,13 +102,15 @@ export default function AdminLayout({
   if (!user) return null
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen">
-        <AdminSidebar user={user} />
-        <div className="flex-1">
-          <main className="p-6">{children}</main>
+    <div className="flex flex-col min-h-screen">
+
+
+      {/* Main Content Area */}
+      <div className="flex-1">
+        <div className="container mx-auto py-6 px-4">
+          {children}
         </div>
       </div>
-    </SidebarProvider>
+    </div>
   )
 }

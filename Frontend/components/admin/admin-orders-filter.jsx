@@ -1,8 +1,7 @@
 "use client"
 
-import  React from "react"
-
-import { useState } from "react"
+import React from "react"
+import { useState, useEffect } from "react"
 import { Search, Filter, X, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,20 +22,54 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { format } from "date-fns"
 
-export default function AdminOrdersFilter() {
+export default function AdminOrdersFilter({ onSearch, onFilterChange }) {
   const [searchTerm, setSearchTerm] = useState("")
   const [activeFilters, setActiveFilters] = useState({})
 
   // Filter form state
-  const [status, setStatus] = useState ("")
-  const [paymentStatus, setPaymentStatus] = useState ("")
+  const [status, setStatus] = useState("")
+  const [paymentStatus, setPaymentStatus] = useState("")
   const [dateFrom, setDateFrom] = useState()
   const [dateTo, setDateTo] = useState()
 
+  // Pass search term to parent when it changes
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (onSearch && searchTerm !== undefined) {
+        onSearch(searchTerm)
+      }
+    }, 500) // 500ms debounce
+
+    return () => clearTimeout(delayDebounceFn)
+  }, [searchTerm, onSearch])
+
+  // Pass active filters to parent when they change
+  useEffect(() => {
+    if (onFilterChange && Object.keys(activeFilters).length > 0) {
+      const apiFilters = {}
+      
+      if (activeFilters.status && activeFilters.status !== 'all') {
+        apiFilters.status = activeFilters.status
+      }
+      
+      if (activeFilters.paymentStatus && activeFilters.paymentStatus !== 'all') {
+        apiFilters.paymentStatus = activeFilters.paymentStatus
+      }
+      
+      if (activeFilters.dateRange) {
+        apiFilters.startDate = activeFilters.dateRange.from
+        apiFilters.endDate = activeFilters.dateRange.to
+      }
+      
+      onFilterChange(apiFilters)
+    }
+  }, [activeFilters, onFilterChange])
+
   const handleSearch = (e) => {
     e.preventDefault()
-    console.log("Searching for:", searchTerm)
-    // In a real app, this would trigger a search
+    if (onSearch) {
+      onSearch(searchTerm)
+    }
   }
 
   const handleApplyFilters = () => {
@@ -57,6 +90,10 @@ export default function AdminOrdersFilter() {
     setDateFrom(undefined)
     setDateTo(undefined)
     setActiveFilters({})
+    
+    if (onFilterChange) {
+      onFilterChange({})
+    }
   }
 
   const handleRemoveFilter = (key) => {
@@ -200,12 +237,12 @@ export default function AdminOrdersFilter() {
         <div className="flex flex-wrap gap-2">
           {Object.entries(activeFilters).map(([key, value]) => (
             <Badge key={key} variant="secondary" className="flex items-center gap-1">
-              {getFilterLabel(key , value)}
+              {getFilterLabel(key, value)}
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-4 w-4 p-0 ml-1"
-                onClick={() => handleRemoveFilter(key )}
+                onClick={() => handleRemoveFilter(key)}
               >
                 <X className="h-3 w-3" />
                 <span className="sr-only">Remove filter</span>
@@ -220,4 +257,3 @@ export default function AdminOrdersFilter() {
     </div>
   )
 }
-

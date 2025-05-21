@@ -33,11 +33,7 @@ const ShippingAddressSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  addressLine2: String,
-  city: {
-    type: String,
-    required: true
-  },
+
   state: {
     type: String,
     required: true
@@ -55,6 +51,39 @@ const ShippingAddressSchema = new mongoose.Schema({
     required: true
   }
 });
+const PaymentDetailsSchema = new mongoose.Schema({
+  method: {
+    type: String,
+    required: true,
+    enum: ['creditCard', 'paypal', 'stripe', 'cod', 'bankTransfer']
+  },
+  // Credit Card details
+  cardNumber: {
+    type: String,
+    // Only store last 4 digits for security
+    validate: {
+      validator: function(v) {
+        return this.method !== 'creditCard' || (v && v.length >= 4);
+      },
+      message: 'Card number is required for credit card payments'
+    }
+  },
+  cardHolderName: String,
+  expiryDate: String,
+  last4Digits: String,
+  
+  // PayPal details
+  paypalEmail: String,
+  paypalTransactionId: String,
+  
+  // Bank Transfer details
+  bankName: String,
+  accountNumber: String,
+  transactionId: String,
+  
+  // COD details
+  codVerificationCode: String
+});
 
 const OrderSchema = new mongoose.Schema({
   user: {
@@ -64,11 +93,11 @@ const OrderSchema = new mongoose.Schema({
   },
   orderItems: [OrderItemSchema],
   shippingAddress: ShippingAddressSchema,
-  paymentMethod: {
-    type: String,
-    required: true,
-    enum: ['credit_card', 'debit_card', 'paypal', 'cod']
-  },
+
+  // Replace paymentMethod with paymentDetails
+  paymentDetails: PaymentDetailsSchema,
+  
+  // Keep this for compatibility with payment processors
   paymentResult: {
     id: String,
     status: String,
@@ -82,24 +111,20 @@ const OrderSchema = new mongoose.Schema({
   },
   shippingPrice: {
     type: Number,
-    required: true,
     default: 0,
     min: 0
   },
   taxPrice: {
     type: Number,
-    required: true,
     default: 0,
     min: 0
   },
   totalPrice: {
     type: Number,
-    required: true,
     min: 0
   },
   orderStatus: {
     type: String,
-    required: true,
     enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'],
     default: 'pending'
   },

@@ -112,7 +112,6 @@ controllers.createOrder = async (req, res) => {
     const {
       orderItems,
       shippingAddress,
-      paymentMethod,
       itemsPrice,
       shippingPrice,
       taxPrice,
@@ -128,6 +127,19 @@ controllers.createOrder = async (req, res) => {
         message: 'No order items'
       });
     }
+
+    // Map the frontend address fields to the required backend fields
+    const mappedShippingAddress = {
+      fullName: shippingAddress.fullName,
+      phoneNumber: shippingAddress.phone, // Map phone to phoneNumber
+      email: shippingAddress.email,
+      addressLine1: shippingAddress.address, // Map address to addressLine1
+      city: shippingAddress.city,
+      state: shippingAddress.state,
+      postalCode: shippingAddress.postalCode,
+      country: shippingAddress.country
+    };
+
 
     // Validate product availability and update order items with current prices
     const updatedOrderItems = await Promise.all(orderItems.map(async (item) => {
@@ -152,8 +164,7 @@ controllers.createOrder = async (req, res) => {
     const newOrder = new Order({
       user: req.user.id,
       orderItems: updatedOrderItems,
-      shippingAddress,
-      paymentMethod,
+      shippingAddress: mappedShippingAddress,
       itemsPrice,
       shippingPrice,
       taxPrice,
